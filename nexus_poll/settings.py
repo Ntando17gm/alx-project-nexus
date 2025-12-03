@@ -1,15 +1,20 @@
 """
-Django settings for nexus_poll project.
+Django settings for nexus_poll project – works locally AND on Railway
 """
 
 from pathlib import Path
+import os
+from decouple import config, Csv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-txa(yo3#+#=q&_+il=@s!@1t)^@w@my20yxy!5(u_3hrmac(w&'
-DEBUG = True
-ALLOWED_HOSTS = []
+# ────────────── SECURITY & HOSTS ──────────────
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-local-key-123')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
 
+# ────────────── APPLICATIONS ──────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -21,26 +26,25 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'polls',
-
     'whitenoise.runserver_nostatic',
 ]
 
+# ────────────── MIDDLEWARE ──────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'nexus_poll.urls'
+WSGI_APPLICATION = 'nexus_poll.wsgi.application'
 
+# ────────────── TEMPLATES & STATIC ──────────────
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -56,57 +60,34 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'nexus_poll.wsgi.application'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# ────────────── DATABASE ──────────────
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        conn_max_age=600
+    )
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
+# ────────────── REST & SWAGGER ──────────────
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Online Poll System API',
+    'DESCRIPTION': 'Real-time voting API for Project Nexus',
+    'VERSION': '1.0.0',
+}
+
+# ────────────── OTHER ──────────────
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
-# ────────────────────────────────
-# Production settings for Railway
-# ────────────────────────────────
-from decouple import config
-import dj_database_url
-import os
-
-# Security
-SECRET_KEY = config('SECRET_KEY', default=SECRET_KEY)  # fallback to local
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
-
-# Database – auto-switch to Postgres on Railway
-DATABASES['default'] = dj_database_url.parse(
-    os.environ.get('DATABASE_URL', str(BASE_DIR / 'db.sqlite3')),
-    conn_max_age=600
-)
-
-# CSRF trusted origins (for Swagger to work)
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.railway.app',
-    'http://localhost',
-    'http://127.0.0.1',
-]
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'http://localhost', 'http://127.0.0.1']
