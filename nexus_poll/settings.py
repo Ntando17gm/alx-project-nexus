@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
-    'drf_yasg',
+    'drf_spectacular',
     'polls',
 
     'whitenoise.runserver_nostatic',
@@ -86,3 +86,27 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+# ────────────────────────────────
+# Production settings for Railway
+# ────────────────────────────────
+from decouple import config
+import dj_database_url
+import os
+
+# Security
+SECRET_KEY = config('SECRET_KEY', default=SECRET_KEY)  # fallback to local
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
+
+# Database – auto-switch to Postgres on Railway
+DATABASES['default'] = dj_database_url.parse(
+    os.environ.get('DATABASE_URL', str(BASE_DIR / 'db.sqlite3')),
+    conn_max_age=600
+)
+
+# CSRF trusted origins (for Swagger to work)
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'http://localhost',
+    'http://127.0.0.1',
+]
